@@ -1,0 +1,40 @@
+# ---------------------------------------------------------------------------
+# CIBLE : DGX SPARK / Puce GB10 (Blackwell Architecture)
+# SOURCE : NVIDIA NGC (Optimized PyTorch Stack - Nov 2025)
+# METHODE : "In-flight dependency filtering" (Karpathy Style)
+# ---------------------------------------------------------------------------
+
+FROM nvcr.io/nvidia/pytorch:25.11-py3
+
+WORKDIR /workspace
+
+# 1. Installation propre de UV
+# DOCUMENTATION : https://docs.astral.sh/uv/configuration/installer/#installation-directory
+# On force l'installation dans /usr/local/bin pour éviter de modifier le PATH système.
+ENV UV_INSTALL_DIR="/usr/local/bin"
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 2. Copie unique du fichier de dépendances
+COPY pyproject.toml .
+
+# 3. THE SANITIZATION STEP (Production Ready)
+# On supprime chirurgicalement la ligne de dépendance 'torch' du TOML.
+# La regex \b garantit qu'on cible 'torch' pur (peu importe les opérateurs version),
+# sans supprimer accidentellement 'torchvision' ou 'torchmetrics'.
+RUN sed -i '/^[[:space:]]*"torch\b/d' pyproject.toml
+
+# 4. Install Dependencies
+# --system : Installe dans l'environnement global (celui de NVIDIA)
+# --no-cache : Réduit la taille de l'image
+ENV UV_SYSTEM_PYTHON=1
+RUN uv pip install \
+    --system \
+    --no-cache \
+    --compile-bytecode \
+    .
+
+# 4. Copie du code source (au dernier moment pour optimiser le cache Docker)
+COPY . .
+
+# Prêt pour le job
+CMD ["python", "main.py"]
