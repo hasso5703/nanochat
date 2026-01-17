@@ -1,5 +1,6 @@
 #!/bin/bash
 
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 # Configuration "Gaming PC" par Hasan Basbunar
 # Adapté pour 1 seul GPU (RTX 3060/4070/4090)
 # Modèle réduit à d12 (approx 125M paramètres) pour des temps d'entraînement réalistes.
